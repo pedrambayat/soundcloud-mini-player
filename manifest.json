@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "SoundCloud Mini",
+  "version": "1.0.0",
+  "description": "A quiet, always-on-top SoundCloud player. Hide it without interrupting your music.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://soundcloud.com/*",
+        "https://www.soundcloud.com/*"
+      ],
+      "js": [
+        "core.js",
+        "player.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "SoundCloud Mini",
+    "default_popup": "popup.html"
+  }
+}
