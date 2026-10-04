@@ -17,11 +17,14 @@
   const duration = () => {const e=q('.playbackTimeline__duration');return SCMiniCore.parseTime(e?.querySelector('[aria-hidden="true"]')?.textContent || e?.textContent) || 0;};
   start.onclick = async () => {
     start.disabled = true; result.textContent = '';
-    const log = (ok,text) => result.textContent += `${ok ? 'PASS' : 'FAIL'} ${text}\n`;
+    let passed = 0, total = 0;
+    const log = (ok,text) => { total++; if(ok) passed++; result.textContent += `${ok ? 'PASS' : 'FAIL'} ${text}\n`; };
     const oldVolume = volume();
     const oldTime = time();
     const oldTitle = name();
     let ui;
+    let originalLike;
+    let nativeLike;
     try {
       const launcher = q('#sc-mini-launcher')?.shadowRoot.querySelector('button');
       if (!documentPictureInPicture.window) launcher.click();
@@ -42,6 +45,17 @@
       log(await wait(()=>Math.abs(volume()-.3)<.03),'Volume reaches 30% on SoundCloud');
       $('.mute').click(); log(await wait(()=>volume()===0),'Mute affects SoundCloud');
       await delay(500); $('.mute').click(); log(await wait(()=>volume()>0),'Unmute affects SoundCloud');
+      nativeLike = q('.playbackSoundBadge .sc-button-like');
+      if (!nativeLike || !$('.like') || $('.like').disabled) throw new Error('Like control is unavailable');
+      const liked = () => nativeLike.classList.contains('sc-button-selected');
+      originalLike = liked();
+      $('.like').click();
+      log(await wait(()=>liked()!==originalLike && $('.like').getAttribute('aria-pressed')===String(liked())), 'Heart toggles the real SoundCloud like and syncs');
+      await delay(1000);
+      if(liked()!==originalLike) nativeLike.click();
+      log(await wait(()=>liked()===originalLike && $('.like').getAttribute('aria-pressed')===String(originalLike)), 'Like restored in SoundCloud and reflected in the player');
+      await delay(1000);
+      log(liked()===originalLike, 'Original like state remains restored');
       const before = name();
       if(!$('.next').disabled){
         $('.next').click(); log(await wait(()=>name()!==before),'Next changes the live track');
@@ -58,10 +72,15 @@
       log(playing(),'Hide preserves real playback');
       if(playing()) q('.playControls__play').click();
       log(await wait(()=>!playing()),'Playback left paused');
+      title.textContent = `Live checks complete: ${passed}/${total} passed`;
       result.textContent += 'Finished. Reopen Mini-player to verify restoration.\n';
     } catch(error) {
+      title.textContent = 'Live checks stopped with an error';
       result.textContent += `ERROR ${error.message}\n`;
       if(playing()) q('.playControls__play').click();
-    } finally { start.disabled=false; }
+    } finally {
+      if(originalLike !== undefined && name()===oldTitle && nativeLike?.classList.contains('sc-button-selected')!==originalLike) nativeLike.click();
+      start.disabled=false;
+    }
   };
 })();

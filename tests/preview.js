@@ -1,7 +1,7 @@
 'use strict';
 const tracks = [
-  { title:'Weightless', artist:'Sunday evening radio', duration:284 },
-  { title:'A very long title for a very slow Sunday evening mix', artist:'After hours', duration:3723 }
+  { title:'Weightless', artist:'Sunday evening radio', duration:284, liked:false },
+  { title:'A very long title for a very slow Sunday evening mix', artist:'After hours', duration:3723, liked:true }
 ];
 let track = 0;
 let empty = false;
@@ -13,12 +13,13 @@ let pip;
 const status = document.querySelector('#status');
 const adapter = {
   read: () => ({ ...tracks[track], title:empty ? '' : tracks[track].title, artist:empty ? '' : tracks[track].artist, artwork:'', elapsed:empty ? 0 : elapsed, duration:empty ? 0 : tracks[track].duration, playing:!empty && playing, volume, muted,
-    controls:Object.fromEntries(['play','previous','next','mute','seek','volume'].map(k=>[k,!empty])) }),
+    controls:Object.fromEntries(['play','previous','next','mute','seek','volume','like'].map(k=>[k,!empty])) }),
   play() { playing = !playing; status.textContent = playing ? 'Playing (demo)' : 'Paused (demo)'; },
   previous() { track = (track + 1) % tracks.length; elapsed = 0; },
   next() { track = (track + 1) % tracks.length; elapsed = 0; },
   seek(value) { elapsed = value * tracks[track].duration; },
   volume(value) { volume = value; muted = value === 0; },
+  like() { tracks[track].liked = !tracks[track].liked; },
   mute() { muted = !muted; }
 };
 const preview = SCMiniPlayer.mount(document, adapter, () => {
@@ -49,10 +50,21 @@ document.querySelector('#check').onclick = () => {
   const results = [];
   const assert = (condition, name) => { results.push(`${condition ? 'PASS' : 'FAIL'} ${name}`); };
   const $ = selector => preview.host.shadowRoot.querySelector(selector);
+  tracks[0].liked = false; tracks[1].liked = true;
   empty = false; playing = true; track = 0; elapsed = 94; preview.update();
   $('.play').click(); preview.update();
   assert(!playing && $('.play').getAttribute('aria-label') === 'Play', 'Play/pause updates the adapter and accessible label');
+  const heart = $('.like');
+  assert(heart && heart.getAttribute('aria-pressed') === 'false', 'Heart starts unselected for an unliked track');
+  heart?.click(); preview.update();
+  assert(tracks[0].liked && heart?.getAttribute('aria-pressed') === 'true' && heart?.getAttribute('aria-label') === 'Unlike track', 'Heart likes the current track and updates its label');
+  heart?.click(); preview.update();
+  assert(!tracks[0].liked && heart?.getAttribute('aria-pressed') === 'false', 'Heart can remove a like');
+  tracks[0].liked = true; preview.update();
+  assert(heart?.getAttribute('aria-pressed') === 'true', 'Heart reflects changes made outside the player');
+  tracks[0].liked = false; preview.update();
   $('.next').click(); preview.update();
+  assert(heart?.getAttribute('aria-pressed') === 'true', 'Heart follows the new track’s liked state');
   assert($('.title').textContent.includes('A very long title') && $('.duration').textContent === '1:02:03', 'Track changes refresh title and long duration');
   $('.seek').value = 500; $('.seek').dispatchEvent(new Event('change')); preview.update();
   assert(elapsed === 1861.5, 'Seek sends the correct fraction to the adapter');
@@ -64,7 +76,7 @@ document.querySelector('#check').onclick = () => {
   muted = false; $('.mute').click(); preview.update();
   assert(muted && $('.mute').getAttribute('aria-label') === 'Unmute', 'Mute label follows playback state');
   empty = true; preview.update();
-  assert($('.play').disabled && $('.seek').disabled && $('.title').textContent === 'Choose a track', 'Empty state disables unavailable controls');
+  assert($('.play').disabled && $('.seek').disabled && heart?.disabled && $('.title').textContent === 'Choose a track', 'Empty state disables unavailable controls');
   empty = false; playing = true; preview.update(); $('.hide').click();
   assert(playing && preview.host.hidden, 'Hide keeps playback running');
   preview.host.hidden = false;

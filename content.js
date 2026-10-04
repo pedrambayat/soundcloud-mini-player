@@ -5,6 +5,7 @@
   const q = selector => document.querySelector(selector);
   const selectors = {
     play: '.playControls__play', previous: '.playControls__prev', next: '.playControls__next',
+    like: '.playbackSoundBadge .sc-button-like',
     mute: '.volume__button', seek: '.playbackTimeline__progressWrapper', volume: '.volume__sliderWrapper'
   };
   function text(selector) {
@@ -46,6 +47,7 @@
         artist: text('.playbackSoundBadge__lightLink'),
         artwork: artworkURL(art?.currentSrc || art?.src || (art ? getComputedStyle(art).backgroundImage : '')),
         playing: !!q('.playControls__play.playing, .playControls__play[aria-label="Pause current"]'),
+        liked: !!q(selectors.like)?.classList.contains('sc-button-selected') || q(selectors.like)?.getAttribute('aria-pressed') === 'true',
         elapsed: parseTime(text('.playbackTimeline__timePassed')) || 0,
         duration: parseTime(text('.playbackTimeline__duration')) || 0,
         volume: Number.isFinite(volume) ? clamp(volume, 0, 1) : 0,
@@ -54,6 +56,7 @@
       };
     },
     play: () => click('play'), previous: () => click('previous'), next: () => click('next'), mute: () => click('mute'),
+    like: () => click('like'),
     seek: value => slide('seek', value), volume: value => slide('volume', value)
   };
   const host = document.createElement('div');

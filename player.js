@@ -8,6 +8,7 @@
     next: '<path d="M18 5v14"/><path d="m6 5 10 7-10 7Z" fill="currentColor" stroke="none"/>',
     volume: '<path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="M17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
     muted: '<path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="m17 9 5 6m0-6-5 6"/>',
+    heart: '<path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.8a5.4 5.4 0 0 0 0-7.6Z"/>',
     hide: '<path d="M6 12h12"/>',
     pop: '<rect x="3" y="4" width="18" height="16" rx="3"/><rect x="11" y="11" width="7" height="6" rx="1" fill="currentColor" stroke="none"/>',
     wave: '<path d="M4 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/>'
@@ -18,6 +19,10 @@
     * { box-sizing:border-box; }
     .mini { --ink:#f0f0f2; --muted:#a3a5ad; --accent:#ef986a; color:var(--ink); background:#1b1c20; font:13px/1.4 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; padding:15px 20px 19px; min-width:260px; width:100%; min-height:220px; }
     .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; height:20px; }
+    .top-actions { display:flex; align-items:center; gap:2px; }
+    .like svg { width:16px; height:16px; }
+    .like[aria-pressed="true"] { color:var(--accent); }
+    .like[aria-pressed="true"] svg { fill:currentColor; }
     .brand { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:11px; font-weight:500; }
     .brand svg { width:15px; height:15px; color:var(--accent); }
     button { border:0; background:transparent; color:var(--muted); padding:0; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; cursor:pointer; flex-shrink:0; }
@@ -55,7 +60,7 @@
     const host = doc.createElement('div');
     const shadow = host.attachShadow({ mode:'open' });
     shadow.innerHTML = `<style>${css}</style><section class="mini" aria-label="SoundCloud mini-player">
-      <header class="top"><span class="brand">${icon('wave')}SoundCloud</span><button class="hide" title="Hide player · music keeps playing" aria-label="Hide player">${icon('hide')}</button></header>
+      <header class="top"><span class="brand">${icon('wave')}SoundCloud</span><span class="top-actions"><button class="like" title="Like track" aria-label="Like track" aria-pressed="false" disabled>${icon('heart')}</button><button class="hide" title="Hide player · music keeps playing" aria-label="Hide player">${icon('hide')}</button></span></header>
       <div class="track"><div class="art">${icon('wave')}<img hidden alt="" referrerpolicy="no-referrer"></div><div class="info"><h1 class="title">Choose a track</h1><p class="artist">Start listening on SoundCloud</p></div></div>
       <div class="timeline"><input class="seek" type="range" min="0" max="1000" value="0" aria-label="Seek" disabled><div class="times"><span class="elapsed">0:00</span><span class="duration">0:00</span></div></div>
       <div class="bottom"><div class="transport"><button class="previous" aria-label="Previous track" title="Previous track">${icon('previous')}</button><button class="play" aria-label="Play" title="Play">${icon('play')}</button><button class="next" aria-label="Next track" title="Next track">${icon('next')}</button></div><div class="volume"><button class="mute" aria-label="Mute" title="Mute">${icon('volume')}</button><input class="level" type="range" min="0" max="100" value="50" aria-label="Volume"></div></div>
@@ -76,7 +81,7 @@
       } catch { notify('Couldn’t update playback. Check the SoundCloud tab.'); }
     }
     $('.hide').onclick = onHide;
-    for (const action of ['previous','next','play','mute']) $('.'+action).onclick = () => act(action);
+    for (const action of ['previous','next','play','mute','like']) $('.'+action).onclick = () => act(action);
     const seek = $('.seek');
     const level = $('.level');
     const editing = new Set();
@@ -118,7 +123,9 @@
         $('.mute').innerHTML = icon(state.muted ? 'muted' : 'volume');
         $('.mute').ariaLabel = $('.mute').title = state.muted ? 'Unmute' : 'Mute';
       }
-      for (const name of ['play','previous','next','mute']) $('.'+name).disabled = !state.controls?.[name];
+      $('.like').setAttribute('aria-pressed', String(!!state.liked));
+      $('.like').ariaLabel = $('.like').title = state.liked ? 'Unlike track' : 'Like track';
+      for (const name of ['play','previous','next','mute','like']) $('.'+name).disabled = !state.controls?.[name];
       seek.disabled = !state.controls?.seek || !(state.duration > 0);
       level.disabled = !state.controls?.volume;
       if (!editing.has(seek)) {
